@@ -19,8 +19,11 @@ class ScanDelegate(DefaultDelegate):
             self.print(time, dev)
         #     print(f"New data from {dev.addr}: {dev}")
 
+    def format_time(self, time):
+        return datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
+
     def print(self, time, dev):
-        time = datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
+        time = self.format_time(time)
         print(f"[ \033[32m{time}\033[39m ] - {dev.addr} ({dev.rssi})")
         for (_, desc, value) in dev.getScanData():
             print(f"  {desc} = {value}")
@@ -46,11 +49,15 @@ class ScanDelegate(DefaultDelegate):
             device_values = []
             print(f"[ \033[32m{device}\033[39m ]")
             for entry in devices[device]:
-                print(f"    {entry[0]}")
+                out = f"    {self.format_time(entry[0])}\n"
+                new_data = False
                 for (_, desc, value) in entry[1]:
                     if value not in device_values:
-                        print(f"        {desc} = {value}")
+                        out += f"        {desc} = {value}\n"
+                        new_data = True
                         device_values.append(value)
+                if new_data:
+                    print(out)
             
 
 
