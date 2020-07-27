@@ -32,6 +32,25 @@ class ScanDelegate(DefaultDelegate):
                 existing.append(entry[1].addr)
                 print(f"[ NEW ] - {entry[1].addr}")
             self.print(*entry)
+
+    # group data for single device id
+    def print_devices(self):
+        devices = dict()
+        for entry in self.log:
+            if entry[1].addr not in devices:
+                devices[entry[1].addr] = [(entry[0], entry[1].getScanData()),]
+            else:
+                devices[entry[1].addr].append((entry[0], entry[1].getScanData()))
+        
+        for device in devices.keys():
+            device_values = []
+            print(f"[ \033[32m{device}\033[39m ]")
+            for entry in devices[device]:
+                print(f"    {entry[0]}")
+                for (_, desc, value) in entry[1]:
+                    if value not in device_values:
+                        print(f"        {desc} = {value}")
+                        device_values.append(value)
             
 
 
@@ -45,6 +64,7 @@ if __name__ == "__main__":
         while True:
             devices = scanner.scan(10.0)
     except KeyboardInterrupt:
+        delegate.print_devices()
         print("[ QUIT ]")
 
         #delegate.print_log()
