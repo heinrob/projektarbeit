@@ -10,17 +10,18 @@ class ScanDelegate(DefaultDelegate):
         self.log = []
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
-        self.log.append((datetime.datetime.timestamp(), dev))
-        if isNewDev:
+        time = datetime.datetime.now().timestamp()
+        self.log.append((time, dev))
+        if isNewDev and not dev.addr in self.database:
             self.database.append(dev.addr)
-        # if isNewDev:
-        #     print(f"New device {dev.addr}")
-        # elif isNewData:
+            print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
+        if isNewData:
+            self.print(time, dev)
         #     print(f"New data from {dev.addr}: {dev}")
 
     def print(self, time, dev):
         time = datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
-        print(f"[ {time} ] - {dev.addr} ({dev.rssi})")
+        print(f"[ \033[32m{time}\033[39m ] - {dev.addr} ({dev.rssi})")
         for (_, desc, value) in dev.getScanData():
             print(f"  {desc} = {value}")
 
@@ -40,10 +41,13 @@ if __name__ == "__main__":
     delegate = ScanDelegate()
     scanner = Scanner().withDelegate(delegate)
 
-    while True:
-        devices = scanner.scan(10.0)
+    try:
+        while True:
+            devices = scanner.scan(10.0)
+    except KeyboardInterrupt:
+        print("[ QUIT ]")
 
-        print(delegate.log)
+        #delegate.print_log()
         # for dev in devices:
         #     print(f"Device {dev.addr} ({dev.addrType}), RSSI={dev.rssi} dB")
         #     for (adtype, desc, value) in dev.getScanData():
