@@ -1,26 +1,35 @@
 #!/usr/bin/env python3
 
 from bluepy.btle import Scanner, DefaultDelegate
+from time import time_ns
 
 class ScanDelegate(DefaultDelegate):
     def __init__(self):
         DefaultDelegate.__init__(self)
+        self.database = []
+        self.log = []
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
+        self.log.append((time_ns(), dev))
         if isNewDev:
-            print(f"New device {dev.addr}")
-        elif isNewData:
-            print(f"New data from {dev.addr}: {dev}")
+            self.database.append(dev.addr)
+        # if isNewDev:
+        #     print(f"New device {dev.addr}")
+        # elif isNewData:
+        #     print(f"New data from {dev.addr}: {dev}")
 
 
 
 if __name__ == "__main__":
 
+    delegate = ScanDelegate()
+    scanner = Scanner().withDelegate(delegate)
+
     while True:
-        scanner = Scanner().withDelegate(DefaultDelegate())
         devices = scanner.scan(10.0)
 
-        for dev in devices:
-            print(f"Device {dev.addr} ({dev.addrType}), RSSI={dev.rssi} dB")
-            for (adtype, desc, value) in dev.getScanData():
-                print("  {desc} = {value}")
+        print(delegate.log)
+        # for dev in devices:
+        #     print(f"Device {dev.addr} ({dev.addrType}), RSSI={dev.rssi} dB")
+        #     for (adtype, desc, value) in dev.getScanData():
+        #         print(f"  {desc} = {value}")
