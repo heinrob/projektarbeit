@@ -37,7 +37,7 @@ class ScanDelegate(DefaultDelegate):
             self.print(*entry)
 
     # group data for single device id
-    def print_devices(self):
+    def print_devices(self, cov_only=False):
         devices = dict()
         for entry in self.log:
             if entry[1].addr not in devices:
@@ -52,10 +52,15 @@ class ScanDelegate(DefaultDelegate):
                 out = f"    {self.format_time(entry[0])}\n"
                 new_data = False
                 for (_, desc, value) in entry[1]:
-                    if value not in device_values:
+                    if not cov_only:
+                        if value not in device_values:
+                            out += f"        {desc} = {value}\n"
+                            new_data = True
+                            device_values.append(value)
+                    else:
+                        if desc == "16b Service Data" and value.startswith("6ffd"):
+                            new_data = True
                         out += f"        {desc} = {value}\n"
-                        new_data = True
-                        device_values.append(value)
                 if new_data:
                     print(out)
             
@@ -71,7 +76,7 @@ if __name__ == "__main__":
         while True:
             devices = scanner.scan(10.0)
     except KeyboardInterrupt:
-        delegate.print_devices()
+        delegate.print_devices(True)
         print("[ QUIT ]")
 
         #delegate.print_log()
