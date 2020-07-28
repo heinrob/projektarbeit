@@ -4,14 +4,17 @@ from bluepy.btle import Scanner, DefaultDelegate
 import datetime
 
 class ScanDelegate(DefaultDelegate):
-    def __init__(self):
+
+    def __init__(self, fd):
         DefaultDelegate.__init__(self)
         self.database = []
         self.log = []
+        self.fd = fd
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
+        self.fd.write(",".join([time, dev.addr, dev.rssi, *[f"{d}={v}" for (_,d,v) in dev.getScanData()]]))
         if isNewDev and not dev.addr in self.database:
             self.database.append(dev.addr)
             print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
@@ -69,15 +72,16 @@ class ScanDelegate(DefaultDelegate):
 
 if __name__ == "__main__":
 
-    delegate = ScanDelegate()
-    scanner = Scanner().withDelegate(delegate)
+    with open("data.csv", "a") as logfile:
+        delegate = ScanDelegate(logfile)
+        scanner = Scanner().withDelegate(delegate)
 
-    try:
-        while True:
-            devices = scanner.scan(10.0)
-    except KeyboardInterrupt:
-        delegate.print_devices(True)
-        print("[ QUIT ]")
+        try:
+            while True:
+                devices = scanner.scan(10.0)
+        except KeyboardInterrupt:
+            delegate.print_devices(True)
+            print("[ QUIT ]")
 
         #delegate.print_log()
         # for dev in devices:
