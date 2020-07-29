@@ -73,7 +73,15 @@ class ScanDelegate(DefaultDelegate):
 
 if __name__ == "__main__":
 
-    with open("data.csv", "a") as logfile:
+    restarts = 0
+    with open("restart_counter.txt", 'r') as f:
+        restarts = int(f.readline())
+    restarts += 1
+
+    with open("restart_counter.txt", 'w') as f:
+        f.write(f"{restarts}\n")
+
+    with open(f"data{restarts}.csv", "a") as logfile:
         delegate = ScanDelegate(logfile)
         scanner = Scanner().withDelegate(delegate)
 
