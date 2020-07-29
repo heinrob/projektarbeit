@@ -14,7 +14,8 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
-        self.fd.write(",".join([str(time), str(dev.addr), str(dev.rssi), *[f"{d}={v}" for (_,d,v) in dev.getScanData()]]))
+        self.fd.write(",".join([f"{time:.6f}", str(dev.addr), str(dev.rssi), *[f"{d}={v}" for (_,d,v) in dev.getScanData()]]))
+        self.fd.write("\n")
         if isNewDev and not dev.addr in self.database:
             self.database.append(dev.addr)
             print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
