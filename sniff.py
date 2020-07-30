@@ -4,21 +4,27 @@ from bluepy.btle import Scanner, DefaultDelegate
 import datetime
 import json
 
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+from Crypto.Cipher import AES, PKCS1_OAEP
+
+
 class ScanDelegate(DefaultDelegate):
 
-    def __init__(self, fd):
+    def __init__(self, fd, cipher):
         DefaultDelegate.__init__(self)
         self.database = []
         self.log = []
         self.fd = fd
+        self.cipher = cipher
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
-        line = {"t": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi}
+        line = {"Time": f"{time:.6f}", "Addr": dev.addr, "Rssi": dev.rssi}
         for (_,d,v) in dev.getScanData():
             line[d] = v
-        print(json.dumps(line))
+        self.write(json.dumps(line))
         # self.fd.write(json.dumps(line))
         # self.fd.write("\n")
         # if isNewDev and not dev.addr in self.database:
@@ -27,6 +33,10 @@ class ScanDelegate(DefaultDelegate):
         # if isNewData:
         #     self.print(time, dev)
         #     print(f"New data from {dev.addr}: {dev}")
+
+    def write(self, line):
+        line += " "*(16-(len(line)%16)) # padding to 16 byte blocks, spaces should be irrelevant to json loads
+        self.fd.write(f"{self.cipher.encrypt(line).hex()}\n") #hex?
 
     def format_time(self, time):
         return datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -74,6 +84,25 @@ class ScanDelegate(DefaultDelegate):
                     print(out)
             
 
+def init_encryption(file_descriptor):
+    recipient_key = RSA.importKey(open("bobby_rsa.pub").read())
+    session_key = get_random_bytes(16)
+
+    # Encrypt the session key with the public RSA key
+    cipher_rsa = PKCS1_OAEP.new(recipient_key)
+    enc_session_key = cipher_rsa.encrypt(session_key)
+
+    #generate iv for CBC
+    iv = get_random_bytes(16)
+    enc_iv = cipher_rsa.encrypt(iv)
+
+    # Encrypt the data with the AES session key
+    cipher_aes = AES.new(session_key, AES.MODE_CBC, iv)
+    # first two lines of file contain session key and init vector
+    [ file_descriptor.write(x) for x in (enc_session_key.hex(), "\n", enc_iv.hex(), "\n") ]
+
+    return cipher_aes
+    
 
 
 if __name__ == "__main__":
@@ -86,19 +115,17 @@ if __name__ == "__main__":
     # with open("restart_counter.txt", 'w') as f:
     #     f.write(f"{restarts}\n")
 
-    with open(f"data{restarts}.csv", "a") as logfile:
-        delegate = ScanDelegate(logfile)
+    with open(f"data{restarts}.csv", "a") as save_file:
+
+        # initialize encryption
+        cipher_aes = init_encryption(save_file)
+
+        delegate = ScanDelegate(save_file, cipher_aes)
         scanner = Scanner().withDelegate(delegate)
 
         try:
             while True:
                 devices = scanner.scan(10.0)
         except KeyboardInterrupt:
-            delegate.print_devices(True)
+            #delegate.print_devices(True)
             print("[ QUIT ]")
-
-        #delegate.print_log()
-        # for dev in devices:
-        #     print(f"Device {dev.addr} ({dev.addrType}), RSSI={dev.rssi} dB")
-        #     for (adtype, desc, value) in dev.getScanData():
-        #         print(f"  {desc} = {value}")
