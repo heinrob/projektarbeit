@@ -2,6 +2,7 @@
 
 from bluepy.btle import Scanner, DefaultDelegate
 import datetime
+import json
 
 class ScanDelegate(DefaultDelegate):
 
@@ -14,13 +15,17 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
-        self.fd.write(",".join([f"{time:.6f}", str(dev.addr), str(dev.rssi), *[f"{d}={v}" for (_,d,v) in dev.getScanData()]]))
-        self.fd.write("\n")
-        if isNewDev and not dev.addr in self.database:
-            self.database.append(dev.addr)
-            print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
-        if isNewData:
-            self.print(time, dev)
+        line = {"t": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi}
+        for (_,d,v) in dev.getScanData():
+            line[d] = v
+        print(json.dumps(line))
+        # self.fd.write(json.dumps(line))
+        # self.fd.write("\n")
+        # if isNewDev and not dev.addr in self.database:
+        #     self.database.append(dev.addr)
+        #     print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
+        # if isNewData:
+        #     self.print(time, dev)
         #     print(f"New data from {dev.addr}: {dev}")
 
     def format_time(self, time):
@@ -74,12 +79,12 @@ class ScanDelegate(DefaultDelegate):
 if __name__ == "__main__":
 
     restarts = 0
-    with open("restart_counter.txt", 'r') as f:
-        restarts = int(f.readline())
-    restarts += 1
+    # with open("restart_counter.txt", 'r') as f:
+    #     restarts = int(f.readline())
+    # restarts += 1
 
-    with open("restart_counter.txt", 'w') as f:
-        f.write(f"{restarts}\n")
+    # with open("restart_counter.txt", 'w') as f:
+    #     f.write(f"{restarts}\n")
 
     with open(f"data{restarts}.csv", "a") as logfile:
         delegate = ScanDelegate(logfile)
