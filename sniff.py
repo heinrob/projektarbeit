@@ -101,6 +101,7 @@ def init_encryption(file_descriptor):
     # first two lines of file contain session key and init vector
     [ file_descriptor.write(x) for x in (enc_session_key.hex(), "\n", enc_iv.hex(), "\n") ]
 
+    print("Encryption initialization successful")
     return cipher_aes
     
 
@@ -108,20 +109,22 @@ def init_encryption(file_descriptor):
 if __name__ == "__main__":
 
     restarts = 0
-    # with open("restart_counter.txt", 'r') as f:
-    #     restarts = int(f.readline())
-    # restarts += 1
+    with open("restart_counter.txt", 'r') as f:
+        restarts = int(f.readline())
+    restarts += 1
 
-    # with open("restart_counter.txt", 'w') as f:
-    #     f.write(f"{restarts}\n")
+    with open("restart_counter.txt", 'w') as f:
+        f.write(f"{restarts}\n")
 
-    with open(f"data{restarts}.csv", "a") as save_file:
+    with open(f"data{restarts}.json", "a") as save_file:
 
         # initialize encryption
         cipher_aes = init_encryption(save_file)
 
         delegate = ScanDelegate(save_file, cipher_aes)
         scanner = Scanner().withDelegate(delegate)
+
+        print("Scanning...")
 
         try:
             while True:
