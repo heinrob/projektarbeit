@@ -4,7 +4,7 @@ from bluepy.btle import Scanner, DefaultDelegate
 import datetime
 import json
 
-from Crypto.PublicKey import RSA
+import rsa
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 
@@ -25,8 +25,7 @@ class ScanDelegate(DefaultDelegate):
         for (_,d,v) in dev.getScanData():
             line[d] = v
         self.write(json.dumps(line))
-        # self.fd.write(json.dumps(line))
-        # self.fd.write("\n")
+        print(".", end="")
         # if isNewDev and not dev.addr in self.database:
         #     self.database.append(dev.addr)
         #     print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
@@ -85,16 +84,15 @@ class ScanDelegate(DefaultDelegate):
             
 
 def init_encryption(file_descriptor):
-    recipient_key = RSA.importKey(open("bobby_rsa.pub").read())
-    session_key = get_random_bytes(16)
+    encryption_key = rsa.PublicKey.load_pkcs1(open("public.pem").read())
 
     # Encrypt the session key with the public RSA key
-    cipher_rsa = PKCS1_OAEP.new(recipient_key)
-    enc_session_key = cipher_rsa.encrypt(session_key)
+    session_key = get_random_bytes(16)
+    enc_session_key = rsa.encrypt(session_key, encryption_key)
 
     #generate iv for CBC
     iv = get_random_bytes(16)
-    enc_iv = cipher_rsa.encrypt(iv)
+    enc_iv = rsa.encrypt(iv, encryption_key)
 
     # Encrypt the data with the AES session key
     cipher_aes = AES.new(session_key, AES.MODE_CBC, iv)
