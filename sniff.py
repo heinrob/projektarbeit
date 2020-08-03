@@ -23,17 +23,14 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
-        line = {"Time": f"{time:.6f}", "Addr": dev.addr, "Rssi": dev.rssi, "Raw": dev.rawData}
-        # for (_,d,v) in dev.getScanData():
-        #     line[d] = v
+        try:
+            line = {"time": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData.hex()}
+        except AttributeError as e:
+            if type(dev.rawData) is str:
+                line = {"time": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData}
+            else:
+                print(e)
         self.write(json.dumps(line))
-        print(".", end="")
-        # if isNewDev and not dev.addr in self.database:
-        #     self.database.append(dev.addr)
-        #     print(f"[ \033[31mNEW\033[39m ] - {dev.addr}")
-        # if isNewData:
-        #     self.print(time, dev)
-        #     print(f"New data from {dev.addr}: {dev}")
 
     def write(self, line):
         line += " "*(16-(len(line)%16)) # padding to 16 byte blocks, spaces should be irrelevant to json loads
@@ -107,8 +104,11 @@ def init_encryption(file_descriptor):
 
 def create_file():
     restarts = 0
-    with open("restart_counter.txt", 'r') as f:
-        restarts = int(f.readline())
+    try:
+        with open("restart_counter.txt", 'r') as f:
+            restarts = int(f.readline())
+    except FileNotFoundError:
+        pass
 
     #skip existing files
     while True:
