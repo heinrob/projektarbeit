@@ -8,6 +8,8 @@ import rsa
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
 
+from os.path import isfile
+
 
 class ScanDelegate(DefaultDelegate):
 
@@ -21,9 +23,9 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
         self.log.append((time, dev))
-        line = {"Time": f"{time:.6f}", "Addr": dev.addr, "Rssi": dev.rssi}
-        for (_,d,v) in dev.getScanData():
-            line[d] = v
+        line = {"Time": f"{time:.6f}", "Addr": dev.addr, "Rssi": dev.rssi, "Raw": dev.rawData}
+        # for (_,d,v) in dev.getScanData():
+        #     line[d] = v
         self.write(json.dumps(line))
         print(".", end="")
         # if isNewDev and not dev.addr in self.database:
@@ -103,18 +105,29 @@ def init_encryption(file_descriptor):
     return cipher_aes
     
 
-
-if __name__ == "__main__":
-
+def create_file():
     restarts = 0
     with open("restart_counter.txt", 'r') as f:
         restarts = int(f.readline())
-    restarts += 1
+
+    #skip existing files
+    while True:
+        restarts += 1
+        filename = f"data{restarts}.json"
+        if not isfile(filename):
+            break
 
     with open("restart_counter.txt", 'w') as f:
         f.write(f"{restarts}\n")
 
-    with open(f"data{restarts}.json", "a") as save_file:
+    return filename
+
+if __name__ == "__main__":
+
+    filename = create_file()
+    print(f"Writing to file: {filename}")
+
+    with open(filename, "a") as save_file:
 
         # initialize encryption
         cipher_aes = init_encryption(save_file)
