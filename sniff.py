@@ -3,6 +3,9 @@
 from bluepy.btle import Scanner, DefaultDelegate
 import datetime
 import json
+import logging
+import signal
+import sys
 
 import rsa
 from Crypto.Random import get_random_bytes
@@ -29,7 +32,8 @@ class ScanDelegate(DefaultDelegate):
             if type(dev.rawData) is str:
                 line = {"time": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData}
             else:
-                print(e)
+                logging.error(e)
+                line = ''
         self.write(json.dumps(line))
 
     def write(self, line):
@@ -39,48 +43,13 @@ class ScanDelegate(DefaultDelegate):
     def format_time(self, time):
         return datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
 
-    def print(self, time, dev):
-        time = self.format_time(time)
-        print(f"[ \033[32m{time}\033[39m ] - {dev.addr} ({dev.rssi})")
-        for (_, desc, value) in dev.getScanData():
-            print(f"  {desc} = {value}")
-
-    def print_log(self):
-        existing = []
-        for entry in self.log:
-            if entry[1].addr not in existing:
-                existing.append(entry[1].addr)
-                print(f"[ NEW ] - {entry[1].addr}")
-            self.print(*entry)
-
-    # group data for single device id
-    def print_devices(self, cov_only=False):
-        devices = dict()
-        for entry in self.log:
-            if entry[1].addr not in devices:
-                devices[entry[1].addr] = [(entry[0], entry[1].getScanData()),]
-            else:
-                devices[entry[1].addr].append((entry[0], entry[1].getScanData()))
-        
-        for device in devices.keys():
-            device_values = []
-            print(f"[ \033[32m{device}\033[39m ]")
-            for entry in devices[device]:
-                out = f"    {self.format_time(entry[0])}\n"
-                new_data = False
-                for (_, desc, value) in entry[1]:
-                    if not cov_only:
-                        if value not in device_values:
-                            out += f"        {desc} = {value}\n"
-                            new_data = True
-                            device_values.append(value)
-                    else:
-                        if desc == "16b Service Data" and value.startswith("6ffd"):
-                            new_data = True
-                        out += f"        {desc} = {value}\n"
-                if new_data:
-                    print(out)
-            
+def sigterm_handler(_signo, _stack_frame):
+    # Raises SystemExit(0):
+    try:
+        logging.critical(f"SIGTERM triggered {_stack_frame}")
+    except:
+        pass
+    sys.exit(0)
 
 def init_encryption(file_descriptor):
     encryption_key = rsa.PublicKey.load_pkcs1(open("public.pem").read())
@@ -98,7 +67,7 @@ def init_encryption(file_descriptor):
     # first two lines of file contain session key and init vector
     [ file_descriptor.write(x) for x in (enc_session_key.hex(), "\n", enc_iv.hex(), "\n") ]
 
-    print("Encryption initialization successful")
+    logging.info("Encryption initialization successful")
     return cipher_aes
     
 
@@ -124,8 +93,12 @@ def create_file():
 
 if __name__ == "__main__":
 
+    # setup signal handling and logging
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    logging.basicConfig(format="%(asctime)s>%(levelname)s:%(message)s",level=logging.DEBUG,filename='sniff.log')
+
     filename = create_file()
-    print(f"Writing to file: {filename}")
+    logging.info(f"Writing to file: {filename}")
 
     with open(filename, "a") as save_file:
 
@@ -135,11 +108,10 @@ if __name__ == "__main__":
         delegate = ScanDelegate(save_file, cipher_aes)
         scanner = Scanner().withDelegate(delegate)
 
-        print("Scanning...")
+        logging.debug("Scanning...")
 
         try:
             while True:
                 devices = scanner.scan(10.0)
         except KeyboardInterrupt:
-            #delegate.print_devices(True)
-            print("[ QUIT ]")
+            logging.debug("[ QUIT ] - by KeyboardInterrupt")
