@@ -16,7 +16,9 @@ rm /home/pi/.python_history
 echo ""> /home/pi/.bash_history
 rm /home/pi/.gitconfig
 
-# blink once
+echo -e "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=DE" > /etc/wpa_supplicant/wpa_supplicant.conf
+
+# flash once
 echo "1" > /sys/class/leds/led0/brightness
 sleep 5
 echo "0" > /sys/class/leds/led0/brightness
