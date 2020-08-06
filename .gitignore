@@ -1,0 +1,4 @@
+*.json
+*.pem
+restart_counter.txt
+sniff.log
