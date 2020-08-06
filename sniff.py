@@ -6,6 +6,8 @@ import json
 import logging
 import signal
 import sys
+from os.path import exists
+import time
 
 import rsa
 from Crypto.Random import get_random_bytes
@@ -13,6 +15,17 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 
 from os.path import isfile
 
+
+def led_set(value):
+    path = "/sys/class/leds/led0/brightness"
+    if exists(path):
+        with open(path, 'w') as ledfile:
+            ledfile.write(f"{value}\n")
+
+def led_interval(duration=1):
+    led_set(1)
+    time.sleep(duration)
+    led_set(0)
 
 class ScanDelegate(DefaultDelegate):
 
@@ -22,6 +35,7 @@ class ScanDelegate(DefaultDelegate):
         self.log = []
         self.fd = fd
         self.cipher = cipher
+        self.led_status = 0
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
@@ -35,6 +49,8 @@ class ScanDelegate(DefaultDelegate):
                 logging.error(e)
                 line = ''
         self.write(json.dumps(line))
+        self.led_status = 1 - self.led_status
+        led_set(self.led_status) # TODO? deactivate led blinking after receiving sync packet?
 
     def write(self, line):
         line += " "*(16-(len(line)%16)) # padding to 16 byte blocks, spaces should be irrelevant to json loads
@@ -91,8 +107,10 @@ def create_file():
 
     return filename
 
+
 if __name__ == "__main__":
 
+    led_set(1)
     # setup signal handling and logging
     signal.signal(signal.SIGTERM, sigterm_handler)
     logging.basicConfig(format="%(asctime)s>%(levelname)s:%(message)s",level=logging.DEBUG,filename='sniff.log')
@@ -100,7 +118,7 @@ if __name__ == "__main__":
     filename = create_file()
     logging.info(f"Writing to file: {filename}")
 
-    with open(filename, "a") as save_file:
+    with open(filename, "a", buffering=1) as save_file:
 
         # initialize encryption
         cipher_aes = init_encryption(save_file)
@@ -109,6 +127,7 @@ if __name__ == "__main__":
         scanner = Scanner().withDelegate(delegate)
 
         logging.debug("Scanning...")
+        led_set(0)
 
         try:
             while True:
