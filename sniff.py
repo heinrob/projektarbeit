@@ -8,6 +8,7 @@ import signal
 import sys
 from os.path import exists
 import time
+from subprocess import Popen
 
 import rsa
 from Crypto.Random import get_random_bytes
@@ -31,33 +32,28 @@ class ScanDelegate(DefaultDelegate):
 
     def __init__(self, fd, cipher):
         DefaultDelegate.__init__(self)
-        self.database = []
-        self.log = []
         self.fd = fd
         self.cipher = cipher
         self.led_status = 0
         self.confirm_sync_acc = False
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
-        time = datetime.datetime.now().timestamp()
-        self.log.append((time, dev))
+        timestamp = datetime.datetime.now().timestamp()
         try:
-            line = {"time": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData.hex()}
+            line = {"time": f"{timestamp:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData.hex()}
         except AttributeError as e:
             if type(dev.rawData) is str:
-                line = {"time": f"{time:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData}
+                line = {"time": f"{timestamp:.6f}", "addr": dev.addr, "rssi": dev.rssi, "payload": dev.rawData}
             else:
                 logging.error(e)
                 line = ''
         self.write(json.dumps(line))
         self.led_status = 1 - self.led_status
         led_set(self.led_status)
-        if dev.rawData.hex().startswith("02011a1aff4c000215ffffffffffffffffffffffff") and not self.confirm_sync_acc:
+        if line['payload'].startswith("02011a1aff4c000215ffffffffffffffffffffffff") and not self.confirm_sync_acc:
             logging.info("Sync packet received.")
             self.confirm_sync_acc = True
-            for x in range(5):
-                led_interval(0.5)
-                time.sleep(0.5)
+            Popen(["/home/pi/projektarbeit/led_code.sh"])
 
     def write(self, line):
         line += " "*(16-(len(line)%16)) # padding to 16 byte blocks, spaces should be irrelevant to json loads
