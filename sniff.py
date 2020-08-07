@@ -36,6 +36,7 @@ class ScanDelegate(DefaultDelegate):
         self.fd = fd
         self.cipher = cipher
         self.led_status = 0
+        self.confirm_sync_acc = False
 
     def handleDiscovery(self, dev, isNewDev, isNewData):
         time = datetime.datetime.now().timestamp()
@@ -50,11 +51,17 @@ class ScanDelegate(DefaultDelegate):
                 line = ''
         self.write(json.dumps(line))
         self.led_status = 1 - self.led_status
-        led_set(self.led_status) # TODO? deactivate led blinking after receiving sync packet?
+        led_set(self.led_status)
+        if dev.rawData.hex().startswith("02011a1aff4c000215ffffffffffffffffffffffff") and not self.confirm_sync_acc:
+            logging.info("Sync packet received.")
+            self.confirm_sync_acc = True
+            for x in range(5):
+                led_interval(0.5)
+                time.sleep(0.5)
 
     def write(self, line):
         line += " "*(16-(len(line)%16)) # padding to 16 byte blocks, spaces should be irrelevant to json loads
-        self.fd.write(f"{self.cipher.encrypt(line).hex()}\n") #hex?
+        self.fd.write(f"{self.cipher.encrypt(line).hex()}\n")
 
     def format_time(self, time):
         return datetime.datetime.fromtimestamp(time).strftime("%Y-%m-%d %H:%M:%S.%f")
