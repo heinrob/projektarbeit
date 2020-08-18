@@ -4,6 +4,8 @@ import json
 import rsa
 from Crypto.Cipher import AES, PKCS1_OAEP
 
+import argparse
+
 class Evaluate:
 
     def __init__(self, key_path):
@@ -42,10 +44,16 @@ class Evaluate:
             time = int(time,base=16)
             self.timeshift = time - float(event['time'])
             print(self.timeshift)
+        else:
+            print(event)
                 
 
 
 
 if __name__ == "__main__":
     ev = Evaluate("./private.pem")
-    ev.read("data16.json")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file")
+    args = parser.parse_args()
+    ev.read(args.file)
