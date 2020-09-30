@@ -5,6 +5,7 @@ import rsa
 from Crypto.Cipher import AES, PKCS1_OAEP
 
 import argparse
+import os
 
 class Evaluate:
 
@@ -12,6 +13,17 @@ class Evaluate:
         self.decryption_key = rsa.PrivateKey.load_pkcs1(open(key_path).read())
         # timeshift is added to every entry after initialized
         self.timeshift = 0
+        self.uniques = dict()
+
+    def walk(self, foldername):
+        for _, _, files in os.walk(foldername):
+            for filename in sorted(files, key=lambda n: int(n[4:-5])): # TODO: only works if convertible
+                f = os.path.join(foldername, filename)
+                self.read(f)
+                print(f)
+        #counter = 0
+        print(len(self.uniques))
+                #input()
 
     def read(self, filename):
         with open(filename, "r") as encrypted:
@@ -45,7 +57,11 @@ class Evaluate:
             self.timeshift = time - float(event['time'])
             print(self.timeshift)
         else:
-            print(event)
+            if event['payload'].upper()[10:14] == "6FFD":
+                if event['payload'] in self.uniques:
+                    self.uniques[event['payload']] += 1
+                else:
+                    self.uniques[event['payload']] = 1
                 
 
 
@@ -54,6 +70,6 @@ if __name__ == "__main__":
     ev = Evaluate("./private.pem")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("file")
+    parser.add_argument("folder")
     args = parser.parse_args()
-    ev.read(args.file)
+    ev.walk(args.folder)
