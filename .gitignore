@@ -1,4 +1,5 @@
-*.json
+data*.json
 restart_counter.txt
 sniff.log
 *.img
+private.pem
