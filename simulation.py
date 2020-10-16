@@ -71,29 +71,69 @@ class WarnApp:
 class Location:
 
     counter = 0
+    PACKET_DROP = 0.2
 
     def __init__(self, size, population=0, infectionRate=0, appSaturation=0):
         self.id = Location.counter
         Location.counter += 1
         self.size = size
+        self.population = population if population > 0 else random.random()
         self.infectionRate = infectionRate
         self.crowd = []
-        if population == 0:
-            self.generateCrowd(random.random(), appSaturation)
-        else:
-            self.generateCrowd(population, appSaturation)
+        
+        self.generateCrowd(appSaturation)
+        self.generateGroups()
 
         self.rpiContainer = dict()
 
-    def generateCrowd(self, population, appSaturation):
-        assert(population >= 0 and population <= 1)
-        for _ in range(int(self.size * population)):
+    def generateCrowd(self, appSaturation):
+        assert(self.population >= 0 and self.population <= 1)
+        for _ in range(int(self.size * self.population)):
             infected = random.random() <= self.infectionRate # infection by location infection rate
             self.crowd.append(Person(self.id, infected, appSaturation))
 
+    def generateGroups(self):
+        # build mesh of contact persons
+        # randomly sized intermeshed groups some single ones connected to other groups
+        self.groups = set()
+        crowdIds = [p.id for p in self.crowd]
+        ungrouped = crowdIds[:]
+        random.shuffle(ungrouped)
+        while True:
+            # group size: 2 - 10
+            splitpoint = random.randint(2,10)
+            group = ungrouped[0:splitpoint]
+            self.groups.add(tuple(set(group)))
+            ungrouped = ungrouped[splitpoint:]
+            if len(ungrouped) < 10:
+                if len(ungrouped) > 0:
+                    self.groups.add(tuple(set(ungrouped)))
+                break
+
+        if len(self.groups) > 1:
+            for _ in range((len(self.groups)+len(self.crowd))//2-1):
+                # "groups of two or three" simulating single contacts
+                # select two or three groups
+                gr = random.sample(self.groups, random.randint(2, min(3, len(self.groups))))
+                # select one person each
+                self.groups.add(tuple(set([random.choice(g) for g in gr])))
+        #print(self.id, self.groups)
+
+
+    def isContact(self, deviceID, rpi):
+        deviceB = int(rpi[:6], base=16)
+        for group in self.groups:
+            if deviceID in group and deviceB in group:
+                return True
+        return False
+
+
     def sendRPI(self, rpi):
         for device in self.rpiContainer.keys():
-            self.rpiContainer[device].append((environment.now, rpi))
+            if self.isContact(device, rpi):
+                if random.random() > Location.PACKET_DROP: # packet drop
+                    rssi = random.randint(-100, -50)
+                    self.rpiContainer[device].append((environment.now, rssi, rpi))
 
     def scanRPI(self, deviceID, duration):
         self.rpiContainer[deviceID] = []

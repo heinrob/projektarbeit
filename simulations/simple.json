@@ -3,6 +3,8 @@
         {"size": 5, "population": 0.5, "appSaturation": 1.0, "infectionRate": 0.001},
         {"size": 5, "population": 1.0, "appSaturation": 0.5, "infectionRate": 1.0},
         {"size": 2, "population": 1.0, "appSaturation": 1.0, "infectionRate": 0.001},
-        {"size": 10, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001}
+        {"size": 10, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
+        {"size": 50, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
+        {"size": 1000, "population": 0.9, "appSaturation": 0.2, "infectionRate": 0.001}
     ]
 }
