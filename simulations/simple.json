@@ -1,10 +1,13 @@
 {
     "locations": [
-        {"size": 5, "population": 0.5, "appSaturation": 1.0, "infectionRate": 0.001},
-        {"size": 5, "population": 1.0, "appSaturation": 0.5, "infectionRate": 1.0},
-        {"size": 2, "population": 1.0, "appSaturation": 1.0, "infectionRate": 0.001},
-        {"size": 10, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
-        {"size": 50, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
-        {"size": 1000, "population": 0.9, "appSaturation": 0.2, "infectionRate": 0.001}
+        {"id": 0, "size": 5, "population": 0.5, "appSaturation": 1.0, "infectionRate": 0.001},
+        {"id": 1, "size": 5, "population": 1.0, "appSaturation": 0.5, "infectionRate": 1.0},
+        {"id": 2, "size": 2, "population": 1.0, "appSaturation": 1.0, "infectionRate": 0.001},
+        {"id": 3, "size": 10, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
+        {"id": 4, "size": 50, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
+        {"id": 5, "size": 1000, "population": 0.9, "appSaturation": 0.2, "infectionRate": 0.001}
+    ],
+    "wormholes": [
+        {"id": 0, "receive": [5], "send": [0,1,2,3,4]}
     ]
 }

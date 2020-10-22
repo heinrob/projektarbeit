@@ -11,6 +11,25 @@ def getTime():
     return datetime.datetime.now().timestamp()
 
 
+### send rpis from $locations to $destinations
+class Wormhole:
+    
+    def __init__(self, ID, receivers, senders):
+        self.id = ID
+        self.receiveFrom = receivers
+        self.sendTo = senders
+
+    # send received rpi to all connected wormhole senders
+    def sendRPI(self, rpi):
+        for lidx in self.sendTo:
+            for device in World.locations[lidx].rpiContainer.keys():
+                if random.random() > Location.PACKET_DROP: # packet drop
+                    rssi = random.randint(-100, -50)
+                    print("wormhole success in", lidx, rpi)
+                    input()
+                    World.locations[lidx].rpiContainer[device].append((environment.now, rssi, rpi))
+
+### just contains smartphone
 class Person:
 
     counter = 0
@@ -22,6 +41,7 @@ class Person:
         Person.counter += 1
         self.smartphone = Smartphone(self.location, appSaturation, self.infected)
 
+### just contains app
 class Smartphone:
 
     counter = 0
@@ -34,6 +54,7 @@ class Smartphone:
             self.warnApp = WarnApp(location, self.id, infected)
 
 
+### mainly for sending, receiving and storing rpis
 class WarnApp:
 
     TIMESLOTS = 144
@@ -51,10 +72,12 @@ class WarnApp:
         self.receivedRPIs = []
 
     def sendRPI(self):
-        day = int(environment.now/3600/24)
-        timeslot = int((environment.now - day * 3600 * 24) * WarnApp.TIMESLOTS / 3600 / 24)
-        rpi = f"{self.deviceID:06x}{day:06x}{timeslot:04x}"
         while True:
+            # build rpi
+            day = int(environment.now/3600/24)
+            timeslot = int((environment.now - day * 3600 * 24) * WarnApp.TIMESLOTS / 3600 / 24)
+            rpi = f"{self.deviceID:06x}{day:06x}{timeslot:04x}"
+
             # initialize scan every 5 minutes at selected timeslot
             if int(environment.now - self.scanTime) % WarnApp.SCAN_INTERVAL in range(WarnApp.SCAN_DURATION):
                 #print(f"scan now {self.deviceID}: {self.scanTime}")
@@ -62,20 +85,25 @@ class WarnApp:
                 for entry in ret:
                     self.receivedRPIs.append(entry)
                 print(self.deviceID, self.receivedRPIs)
-            #print(f"{environment.now:.4f} sending RPI {rpi}")
+            
+            # send rpi to devices in range
             World.locations[self.locationID].sendRPI(rpi)
             yield environment.timeout(random.random()*0.07+0.2) # see specification
             
 
-
+### contians transmission logic between apps
 class Location:
 
-    counter = 0
     PACKET_DROP = 0.2
 
-    def __init__(self, size, population=0, infectionRate=0, appSaturation=0):
-        self.id = Location.counter
-        Location.counter += 1
+    def __init__(self, size, ID=-1, population=0, infectionRate=0, appSaturation=0):
+        if ID > -1 and ID not in World.locations.keys():
+            self.id = ID
+        else:
+            self.id = 0
+            if len(World.locations) > 0:
+                self.id = max(World.locations.keys()) + 1
+        
         self.size = size
         self.population = population if population > 0 else random.random()
         self.infectionRate = infectionRate
@@ -85,7 +113,9 @@ class Location:
         self.generateGroups()
 
         self.rpiContainer = dict()
+        self.wormholes = []
 
+    # fill location with people
     def generateCrowd(self, appSaturation):
         assert(self.population >= 0 and self.population <= 1)
         for _ in range(int(self.size * self.population)):
@@ -94,7 +124,7 @@ class Location:
 
     def generateGroups(self):
         # build mesh of contact persons
-        # randomly sized intermeshed groups some single ones connected to other groups
+        # randomly sized intermeshed groups, some single persons connected to other groups
         self.groups = set()
         crowdIds = [p.id for p in self.crowd]
         ungrouped = crowdIds[:]
@@ -109,7 +139,8 @@ class Location:
                 if len(ungrouped) > 0:
                     self.groups.add(tuple(set(ungrouped)))
                 break
-
+        
+        # create single contacts inbetween groups
         if len(self.groups) > 1:
             for _ in range((len(self.groups)+len(self.crowd))//2-1):
                 # "groups of two or three" simulating single contacts
@@ -117,9 +148,9 @@ class Location:
                 gr = random.sample(self.groups, random.randint(2, min(3, len(self.groups))))
                 # select one person each
                 self.groups.add(tuple(set([random.choice(g) for g in gr])))
-        #print(self.id, self.groups)
 
 
+    # check if both persons are in one group
     def isContact(self, deviceID, rpi):
         deviceB = int(rpi[:6], base=16)
         for group in self.groups:
@@ -134,28 +165,47 @@ class Location:
                 if random.random() > Location.PACKET_DROP: # packet drop
                     rssi = random.randint(-100, -50)
                     self.rpiContainer[device].append((environment.now, rssi, rpi))
+        ### wormholes
+        for wormhole in self.wormholes:
+            print("sending to", wormhole.sendTo)
+            wormhole.sendRPI(rpi)
 
+    # start scanning, open a container and receive for $duration time, returns the container
     def scanRPI(self, deviceID, duration):
         self.rpiContainer[deviceID] = []
         yield environment.timeout(duration)
         return self.rpiContainer.pop(deviceID)
 
 
+### container for locations, scenario loading from json files and starting point for the simulation
 class World:
 
-    locations = []
+    locations = dict()
 
+    # start simulation in every warn app
     def start(self):
-        for location in World.locations:
-            for person in location.crowd:
+        for lidx in World.locations:
+            for person in World.locations[lidx].crowd:
                 if person.smartphone.warnApp:
                     environment.process(person.smartphone.warnApp.sendRPI())
 
+    # load scenario from json file
     def load(self, filename):
         with open(filename, "r") as jsonfile:
             scenario = json.load(jsonfile)
+
+            # parse locations
             for location in scenario['locations']:
-                World.locations.append(Location(location['size'], location['population'], location['infectionRate'], location['appSaturation']))
+                if location['id'] not in World.locations:
+                    ID = location['id']
+                else:
+                    ID = max(World.locations.keys()) + 1
+                World.locations[ID] = Location(location['size'], ID, location['population'], location['infectionRate'], location['appSaturation'])
+
+            # parse wormholes
+            for wormhole in scenario['wormholes']:
+                for location in wormhole['receive']:
+                    World.locations[location].wormholes.append(Wormhole(wormhole['id'], wormhole['receive'], wormhole['send']))
 
 
 if __name__ == "__main__":
@@ -165,9 +215,12 @@ if __name__ == "__main__":
     parser.add_argument("--scenario", "-s", type=str, help="JSON scenario config file")
     args = parser.parse_args()
 
+    # set up the environmet
     environment = simpy.Environment(args.start_time)
     world = World()
     if args.scenario:
         world.load(args.scenario)
+    
+    # start simulation
     world.start()
     environment.run(until=args.start_time+args.duration)
