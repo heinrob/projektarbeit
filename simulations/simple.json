@@ -1,13 +1,22 @@
 {
     "locations": [
-        {"id": 0, "size": 5, "population": 0.5, "appSaturation": 1.0, "infectionRate": 0.001},
-        {"id": 1, "size": 5, "population": 1.0, "appSaturation": 0.5, "infectionRate": 1.0},
-        {"id": 2, "size": 2, "population": 1.0, "appSaturation": 1.0, "infectionRate": 0.001},
-        {"id": 3, "size": 10, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
-        {"id": 4, "size": 50, "population": 1.0, "appSaturation": 0.2, "infectionRate": 0.001},
-        {"id": 5, "size": 1000, "population": 0.9, "appSaturation": 0.2, "infectionRate": 0.001}
+        {"id": 0, "size": 5, "population": 0.5, "stay": 2000, "deviation": 1000},
+        {"id": 1, "size": 5, "population": 1.0, "stay": 4000, "deviation": 1000},
+        {"id": 2, "size": 2, "population": 1.0, "stay": 1000, "deviation": 50},
+        {"id": 3, "size": 10, "population": 1.0, "stay": 2000, "deviation": 1000},
+        {"id": 4, "size": 50, "population": 1.0, "stay": 2000, "deviation": 100},
+        {"id": 5, "size": 1000, "population": 0.9, "stay": 200, "deviation": 50}
     ],
     "wormholes": [
-        {"id": 0, "receive": [5], "send": [0,1,2,3,4]}
-    ]
+        {"id": 0, "receive": [[5,0]], "send": [[0,-1],[1,-1],[2,-1],[3,-1],[4,-1]]}
+    ],
+    "config": {
+        "packetDrop": 0.2,
+        "timeslots": 144,
+        "scanInterval": 300,
+        "scanDuration": 1,
+        "homesickness": 0.7,
+        "appSaturation": 0.2,
+        "infectionRate": 0.001
+    }
 }
