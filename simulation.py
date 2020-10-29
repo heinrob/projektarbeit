@@ -25,13 +25,12 @@ class Wormhole:
 
     # send received rpi to all connected wormhole senders
     def sendRPI(self, rpi):
+        wormholebit = int(rpi[0], base=16)
+        if wormholebit < 0xf:
+            wormholebit += 1
+        updatedRPI = f"{wormholebit:1x}{rpi[1:]}"
         for lidx, sublocation in self.sendTo:
-            for device in World.locations[lidx].rpiContainer[sublocation].keys():
-                if random.random() > Location.PACKET_DROP: # packet drop
-                    rssi = random.randint(-100, -50)
-                    #print("wormhole success in", lidx, rpi)
-                    #input()
-                    World.locations[lidx].rpiContainer[sublocation][device].append((environment.now, rssi, rpi))
+            World.locations[lidx].sendRPI(updatedRPI, sublocation)
 
 ### just contains smartphone
 class Person:
@@ -136,7 +135,7 @@ class WarnApp:
             # build rpi
             day = int(environment.now/3600/24)
             timeslot = int((environment.now - day * 3600 * 24) * WarnApp.TIMESLOTS / 3600 / 24)
-            rpi = f"{self.device.id:06x}{day:06x}{timeslot:04x}"
+            rpi = f"0{self.device.id:011x}{day:012x}{timeslot:08x}"
 
             # initialize scan every 5 minutes at selected timeslot
             if int(environment.now - self.scanTime) % WarnApp.SCAN_INTERVAL in range(WarnApp.SCAN_DURATION):
