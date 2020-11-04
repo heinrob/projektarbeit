@@ -3,3 +3,4 @@ restart_counter.txt
 sniff.log
 *.img
 private.pem
+__pycache__
