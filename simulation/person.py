@@ -9,16 +9,17 @@ class Person:
 
     counter = 0
 
-    def __init__(self, world):
+    def __init__(self, world, homeID):
         self.id = Person.counter
         Person.counter += 1
 
         self.world = world
+        self.home = homeID
 
         self.infected = random.random() <= self.world.constants['infectionRate']
 
-        Home(self)
-        self.location = self.world.homes[self.id]
+        #Home(self)
+        self.location = self.world.homes[self.home]
         self.sublocation = 0
         self.smartphone = Smartphone(self)
 
@@ -30,10 +31,10 @@ class Person:
         while True:
             if random.random() < self.world.constants['homesickness']:
                 # move home
-                self.location = self.world.homes[self.id]
+                self.location = self.world.homes[self.home]
                 self.sublocation = 0
-                if len(self.locationlog) < 1 or not self.locationlog[-1] == -self.id:
-                    self.locationlog.append(-self.id)
+                if len(self.locationlog) < 1 or not self.locationlog[-1] == -self.home:
+                    self.locationlog.append(-self.home)
                 yield self.world.environment.timeout(abs(random.gauss(self.location.stay, self.location.stayDeviation)))
             else:
                 # move to a location (or another persons home?)

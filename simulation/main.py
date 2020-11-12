@@ -28,7 +28,7 @@ if __name__ == "__main__":
     environment.run(until=args.start_time+args.duration)
 
     for person in world.persons:
-        print(person.id, person.locationlog)
+        print(person.id, person.home, person.locationlog)
         #input()
 print()
 print('location log for each person, negative IDs indicate home')

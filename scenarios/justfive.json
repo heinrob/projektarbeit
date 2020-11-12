@@ -1,0 +1,18 @@
+{
+    "locations": [
+        {"id": 0, "size": 5, "population": 0.5, "stay": 2000, "deviation": 1000},
+        {"id": 1, "size": 5, "population": 1.0, "stay": 4000, "deviation": 1000}
+    ],
+    "wormholes": [
+        {"id": 0, "receive": [[0,0]], "send": [[1,0]]}
+    ],
+    "config": {
+        "packetDrop": 0.2,
+        "timeslots": 144,
+        "scanInterval": 300,
+        "scanDuration": 1,
+        "homesickness": 0.7,
+        "appSaturation": 0.2,
+        "infectionRate": 0.001
+    }
+}

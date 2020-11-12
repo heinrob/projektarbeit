@@ -2,7 +2,7 @@
 import json
 import random
 
-from location import Location
+from location import Location,Home
 from person import Person
 from wormhole import Wormhole
 
@@ -47,9 +47,16 @@ class World:
                 self.locations[location['id']] = Location(location, self)
                 population += location['size']
 
-            # TODO: generate people based on population. population * Person.HOMESICKNESS? -> generate Location as persons homes
-            for _ in range(int(population * self.constants['homesickness'])):
-                self.persons.append(Person(self))
+            # generate people based on population. population * Person.HOMESICKNESS? -> generate Location as persons homes
+            # TODO: generate families
+            target_amount = int(population * self.constants['homesickness'])
+            while len(self.persons) < target_amount:
+                # generate family
+                family_size = random.randint(1,5)
+                home = Home(self, family_size + 2) # TODO: dangerous for future
+                self.homes[home.id] = home
+                for _ in range(family_size):
+                    self.persons.append(Person(self, home.id))
 
             # parse wormholes
             for wormhole in scenario['wormholes']:

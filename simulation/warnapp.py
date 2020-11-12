@@ -23,15 +23,12 @@ class WarnApp:
 
             # initialize scan every 5 minutes at selected timeslot
             if int(self.world.environment.now - self.scanTime) % self.world.constants['scanInterval'] in range(self.world.constants['scanDuration']):
-            #if int(self.world.environment.now - self.scanTime) % self.world.constants['scanInterval'] == 0:
-                #print(f"scan now {self.deviceID}: {self.scanTime}")
-                ret = yield self.world.environment.process(self.device.owner.location.scanRPI(self.device.id, self.device.owner.sublocation))
-                for entry in ret:
-                    self.receivedRPIs.append(entry)
-            
-            # send rpi to devices in range
+
+                self.world.environment.process(self.device.owner.location.scanRPI(self, self.device.owner.sublocation))
+
             self.device.owner.location.sendRPI(rpi, self.device.owner.sublocation)
-            #print(f"send {self.device.owner.location.id}: {rpi}")
             yield self.world.environment.timeout(random.random()*0.07+0.2) # see specification
 
 
+    def receiveRPI(self, time, rssi, rpi):
+        self.receivedRPIs.append((time, rssi, rpi))
